@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using System.Net;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using RevitBatchAdminWeb.Models;
 using System.Text;
@@ -29,38 +30,19 @@ namespace RevitBatchAdminWeb.Services
                 password = password
             });
 
-            var content = new StringContent(
-                json,
-                Encoding.UTF8,
-                "application/json"
-            );
-
             try
             {
-                // First attempt
-                var response = await _httpClient.PostAsync(
-                    $"{BaseUrl}/Auth/admin-login",
-                    content
-                );
-
+                var response = await PostJsonAsync($"{BaseUrl}/Auth/admin-login", json);
                 var responseJson = await response.Content.ReadAsStringAsync();
 
-                // Render free API may sleep. Retry once if API returns 502/503.
-                if ((int)response.StatusCode == 502 || (int)response.StatusCode == 503)
+                // Render free instance may sleep. Retry once if API is waking up.
+                if (response.StatusCode == HttpStatusCode.BadGateway ||
+                    response.StatusCode == HttpStatusCode.ServiceUnavailable ||
+                    response.StatusCode == HttpStatusCode.GatewayTimeout)
                 {
-                    await Task.Delay(3000);
+                    await Task.Delay(4000);
 
-                    var retryContent = new StringContent(
-                        json,
-                        Encoding.UTF8,
-                        "application/json"
-                    );
-
-                    response = await _httpClient.PostAsync(
-                        $"{BaseUrl}/Auth/admin-login",
-                        retryContent
-                    );
-
+                    response = await PostJsonAsync($"{BaseUrl}/Auth/admin-login", json);
                     responseJson = await response.Content.ReadAsStringAsync();
                 }
 
@@ -68,9 +50,10 @@ namespace RevitBatchAdminWeb.Services
                 {
                     string friendlyMessage = response.StatusCode switch
                     {
-                        System.Net.HttpStatusCode.Unauthorized => "Invalid admin username or password.",
-                        System.Net.HttpStatusCode.BadGateway => "API is temporarily unavailable. Please try again in a few seconds.",
-                        System.Net.HttpStatusCode.ServiceUnavailable => "API is waking up. Please try again in a few seconds.",
+                        HttpStatusCode.Unauthorized => "Invalid admin username or password.",
+                        HttpStatusCode.BadGateway => "API is temporarily unavailable. Please try again in a few seconds.",
+                        HttpStatusCode.ServiceUnavailable => "API is waking up. Please try again in a few seconds.",
+                        HttpStatusCode.GatewayTimeout => "API request timed out. Please try again.",
                         _ => "Admin login failed. Please try again."
                     };
 
@@ -111,6 +94,17 @@ namespace RevitBatchAdminWeb.Services
                     ErrorMessage = "Unable to connect to the API. Please try again."
                 };
             }
+        }
+
+        private async Task<HttpResponseMessage> PostJsonAsync(string url, string json)
+        {
+            var content = new StringContent(
+                json,
+                Encoding.UTF8,
+                "application/json"
+            );
+
+            return await _httpClient.PostAsync(url, content);
         }
 
         public async Task<List<UserDto>> GetUsersAsync()
