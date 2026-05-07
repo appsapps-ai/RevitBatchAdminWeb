@@ -110,7 +110,13 @@
                         </a>
                     }
 
-                    @if (normalizedRole != "admin")
+                    @if (normalizedRole == "admin")
+                    {
+                        <span class="text-muted small">
+                            Admin account protected
+                        </span>
+                    }
+                    else
                     {
                         <a asp-controller="Licenses"
                            asp-action="Create"
@@ -119,20 +125,28 @@
                             Add License
                         </a>
 
-                        <form asp-action="Delete" method="post" style="display:inline;">
-                            <input type="hidden" name="id" value="@user.id" />
-                            <button type="submit"
-                                    class="btn btn-danger btn-sm"
-                                    onclick="return confirm('WARNING: This will permanently delete this user and all licenses under this user. This action cannot be undone. Continue?');">
-                                Delete
-                            </button>
-                        </form>
-                    }
-                    else
-                    {
-                        <span class="text-muted small">
-                            Admin account protected
-                        </span>
+                        @if (normalizedRole == "contract manager")
+                        {
+                            <form asp-action="Delete" method="post" style="display:inline;">
+                                <input type="hidden" name="id" value="@user.id" />
+                                <button type="submit"
+                                        class="btn btn-danger btn-sm"
+                                        onclick="return confirm('WARNING: This user is a Contract Manager. Deleting this Contract Manager will permanently delete the Contract Manager account, the main CM license, and all sub-licenses under this Contract Manager. This action cannot be undone. Continue?');">
+                                    Delete
+                                </button>
+                            </form>
+                        }
+                        else
+                        {
+                            <form asp-action="Delete" method="post" style="display:inline;">
+                                <input type="hidden" name="id" value="@user.id" />
+                                <button type="submit"
+                                        class="btn btn-danger btn-sm"
+                                        onclick="return confirm('WARNING: This will permanently delete this user and all licenses under this user. This action cannot be undone. Continue?');">
+                                    Delete
+                                </button>
+                            </form>
+                        }
                     }
                 </td>
             </tr>
