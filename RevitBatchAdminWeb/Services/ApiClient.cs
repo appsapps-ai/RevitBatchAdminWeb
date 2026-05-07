@@ -7,7 +7,7 @@ namespace RevitBatchAdminWeb.Services
     public class ApiClient
     {
         private readonly HttpClient _httpClient;
-        private const string BaseUrl = "http://localhost:5162/api";
+        private const string BaseUrl = "https://revitbatchapi.onrender.com/api";
 
         public ApiClient(HttpClient httpClient)
         {
