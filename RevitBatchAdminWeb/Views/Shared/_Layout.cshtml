@@ -1,129 +1,56 @@
-﻿<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Revit Batch SaaS</title>
+﻿<script>
+    (function () {
+        const refreshIntervalMs = 10000;
 
-    <script type="importmap"></script>
+        const liveUpdatePages = [
+            "/Dashboard",
+            "/Users",
+            "/Licenses",
+            "/ContractManager/Dashboard"
+        ];
 
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/RevitBatchAdminWeb.styles.css" asp-append-version="true" />
-</head>
+        const currentPath = window.location.pathname.toLowerCase();
 
-<body>
-    <header>
-        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom app-navbar">
-            <div class="container">
-                <a class="navbar-brand fw-bold" asp-controller="Home" asp-action="Index">
-                    Revit Batch SaaS
-                </a>
+        const shouldAutoRefresh = liveUpdatePages.some(function (page) {
+            const normalizedPage = page.toLowerCase();
 
-                <button class="navbar-toggler"
-                        type="button"
-                        data-bs-toggle="collapse"
-                        data-bs-target="#mainNavbar"
-                        aria-controls="mainNavbar"
-                        aria-expanded="false"
-                        aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
+            return currentPath === normalizedPage ||
+                currentPath.startsWith(normalizedPage + "/");
+        });
 
-                <div id="mainNavbar" class="collapse navbar-collapse">
-                    <ul class="navbar-nav ms-auto">
+        if (!shouldAutoRefresh) {
+            return;
+        }
 
-                        @if (Context.Session.GetString("AdminToken") != null)
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="Dashboard" asp-action="Index">
-                                    Dashboard
-                                </a>
-                            </li>
+        function userIsEditing() {
+            const active = document.activeElement;
 
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="Users" asp-action="Index">
-                                    Users
-                                </a>
-                            </li>
+            if (!active) {
+                return false;
+            }
 
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="Licenses" asp-action="Index">
-                                    Licenses
-                                </a>
-                            </li>
+            const tagName = active.tagName.toLowerCase();
 
-                            <li class="nav-item">
-                                <form asp-controller="Auth"
-                                      asp-action="Logout"
-                                      method="post"
-                                      class="d-inline">
-                                    <button type="submit"
-                                            class="btn btn-link nav-link logout-link"
-                                            onclick="return confirm('Are you sure you want to logout?');">
-                                        Logout
-                                    </button>
-                                </form>
-                            </li>
-                        }
-                        else if (Context.Session.GetString("CmToken") != null)
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="ContractManager" asp-action="Dashboard">
-                                    Contract Manager Dashboard
-                                </a>
-                            </li>
+            return tagName === "input" ||
+                tagName === "select" ||
+                tagName === "textarea" ||
+                active.isContentEditable;
+        }
 
-                            <li class="nav-item">
-                                <form asp-controller="ContractManager"
-                                      asp-action="Logout"
-                                      method="post"
-                                      class="d-inline">
-                                    <button type="submit"
-                                            class="btn btn-link nav-link logout-link"
-                                            onclick="return confirm('Are you sure you want to logout?');">
-                                        Logout
-                                    </button>
-                                </form>
-                            </li>
-                        }
-                        else
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="Auth" asp-action="Login">
-                                    Admin Login
-                                </a>
-                            </li>
+        function hasOpenModal() {
+            return document.querySelector(".modal.show") !== null;
+        }
 
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="ContractManager" asp-action="Login">
-                                    Contract Manager Login
-                                </a>
-                            </li>
-                        }
+        setInterval(function () {
+            if (userIsEditing()) {
+                return;
+            }
 
-                    </ul>
-                </div>
-            </div>
-        </nav>
-    </header>
+            if (hasOpenModal()) {
+                return;
+            }
 
-    <main class="app-main">
-        <div class="container">
-            @RenderBody()
-        </div>
-    </main>
-
-    <footer class="app-footer">
-        <div class="container">
-            <span>&copy; 2026 Revit Batch SaaS. All rights reserved.</span>
-        </div>
-    </footer>
-
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
-
-    @await RenderSectionAsync("Scripts", required: false)
-</body>
-</html>
+            window.location.reload();
+        }, refreshIntervalMs);
+    })();
+</script>

@@ -9,6 +9,18 @@
     <p class="page-subtitle">
         Manage main contract manager licenses, sub-licenses, device bindings, expiry dates, and license status.
     </p>
+
+    <div class="d-flex align-items-center gap-2 mt-2">
+        <span class="badge bg-success-subtle text-success border border-success-subtle live-refresh-badge">
+            ↻ Auto refresh every 10s
+        </span>
+
+        <button type="button"
+                class="btn btn-sm btn-outline-secondary"
+                onclick="window.location.reload();">
+            Refresh Now
+        </button>
+    </div>
 </div>
 
 @if (TempData["Success"] != null)
@@ -85,13 +97,17 @@
             var licenseTypeText = string.IsNullOrWhiteSpace(lic.licenseType) ? "Unknown" : lic.licenseType;
             var usernameText = lic.username?.Trim() ?? "";
             var normalizedUsername = usernameText.ToLower();
-            var deviceText = lic.deviceId == null || lic.deviceId.ToString() == "{}"
-                ? "Not Bound"
-                : lic.deviceId.ToString();
 
-            var searchText = $"{lic.licenseKey} {usernameText} {licenseTypeText} {statusText} {deviceText}".ToLower();
             var isAdminLicense = normalizedUsername == "admin";
             var isMainCmLicense = licenseTypeText == "MainCM";
+
+            var deviceText = isMainCmLicense
+                ? "Web Access"
+                : lic.deviceId == null || lic.deviceId.ToString() == "{}"
+                    ? "Not Bound"
+                    : lic.deviceId.ToString();
+
+            var searchText = $"{lic.licenseKey} {usernameText} {licenseTypeText} {statusText} {deviceText}".ToLower();
 
             <tr class="license-row"
                 data-search="@searchText"
@@ -194,14 +210,17 @@
                         </button>
                     </form>
 
-                    <form asp-action="ResetDevice" method="post" style="display:inline;">
-                        <input type="hidden" name="id" value="@lic.id" />
-                        <button type="submit"
-                                class="btn btn-danger btn-sm"
-                                onclick="return confirm('Deauthorize this license? This will remove the current device binding. The user must activate this license again on the next login. Continue?');">
-                            Deauthorize License
-                        </button>
-                    </form>
+                    @if (!isMainCmLicense)
+                    {
+                        <form asp-action="ResetDevice" method="post" style="display:inline;">
+                            <input type="hidden" name="id" value="@lic.id" />
+                            <button type="submit"
+                                    class="btn btn-danger btn-sm"
+                                    onclick="return confirm('Deauthorize this license? This will remove the current device binding. The user must activate this license again on the next login. Continue?');">
+                                Deauthorize License
+                            </button>
+                        </form>
+                    }
 
                     @if (isAdminLicense)
                     {

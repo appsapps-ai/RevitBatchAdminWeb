@@ -4,18 +4,36 @@
     ViewData["Title"] = "Contract Manager Dashboard";
 }
 
-<h2>Contract Manager Dashboard</h2>
+<div class="page-header">
+    <h2 class="page-title">Contract Manager Dashboard</h2>
+    <p class="page-subtitle">
+        Manage your assigned sub-licenses and device authorizations.
+    </p>
 
-<p>
-    Logged in as:
-    <strong>@ViewBag.CmUsername</strong>
-</p>
+    <div class="d-flex align-items-center gap-2 mt-2">
+        <span class="badge bg-success-subtle text-success border border-success-subtle live-refresh-badge">
+            ↻ Auto refresh every 10s
+        </span>
 
-<p>
-    Main License:
-    <strong>@ViewBag.CmLicenseKey</strong>
-</p>
+        <button type="button"
+                class="btn btn-sm btn-outline-secondary"
+                onclick="window.location.reload();">
+            Refresh Now
+        </button>
+    </div>
+</div>
 
+<div class="mb-3">
+    <p class="mb-1">
+        Logged in as:
+        <strong>@ViewBag.CmUsername</strong>
+    </p>
+
+    <p class="mb-0">
+        Main License:
+        <strong>@ViewBag.CmLicenseKey</strong>
+    </p>
+</div>
 
 @if (TempData["Success"] != null)
 {
@@ -31,26 +49,28 @@
     </div>
 }
 
-<div class="row mb-3">
-    <div class="col-md-5">
-        <input type="text"
-               id="licenseSearch"
-               class="form-control"
-               placeholder="Search license key or device ID..." />
-    </div>
+<div class="filter-bar">
+    <div class="row">
+        <div class="col-md-5 mb-2 mb-md-0">
+            <input type="text"
+                   id="licenseSearch"
+                   class="form-control"
+                   placeholder="Search license key or device ID..." />
+        </div>
 
-    <div class="col-md-3">
-        <select id="statusFilter" class="form-control">
-            <option value="">All Status</option>
-            <option value="enabled">Enabled</option>
-            <option value="disabled">Disabled</option>
-        </select>
-    </div>
+        <div class="col-md-3 mb-2 mb-md-0">
+            <select id="statusFilter" class="form-control">
+                <option value="">All Status</option>
+                <option value="enabled">Enabled</option>
+                <option value="disabled">Disabled</option>
+            </select>
+        </div>
 
-    <div class="col-md-2">
-        <button type="button" id="clearFilters" class="btn btn-secondary w-100">
-            Clear
-        </button>
+        <div class="col-md-2">
+            <button type="button" id="clearFilters" class="btn btn-secondary w-100">
+                Clear
+            </button>
+        </div>
     </div>
 </div>
 
