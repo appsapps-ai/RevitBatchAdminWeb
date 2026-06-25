@@ -1,307 +1,672 @@
-﻿@model List<RevitBatchAdminWeb.Services.LicenseDto>
+@model List<RevitBatchAdminWeb.Services.LicenseDto>
 
 @{
-    ViewData["Title"] = "Licenses";
+    ViewData["Title"] = "License Management";
+    var now = DateTime.UtcNow;
 }
 
-<div class="page-header">
-    <h2 class="page-title">License Management</h2>
-    <p class="page-subtitle">
-        Manage main contract manager licenses, sub-licenses, device bindings, expiry dates, and license status.
-    </p>
-
-    <div class="d-flex align-items-center gap-2 mt-2">
-        <span class="badge bg-success-subtle text-success border border-success-subtle live-refresh-badge">
-            ↻ Auto refresh every 10s
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <div>
+        <h2 class="page-title mb-1">License Management</h2>
+        <p class="page-subtitle mb-0">Manage licenses, device bindings, expiry dates, and subscriptions.</p>
+    </div>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <span class="badge bg-success-subtle text-success border border-success-subtle">
+            <i class="bi bi-arrow-repeat"></i> Auto refresh every 10s
         </span>
-
-        <button type="button"
-                class="btn btn-sm btn-outline-secondary"
-                onclick="window.location.reload();">
-            Refresh Now
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.location.reload();">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
         </button>
+        <a asp-action="Create" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg"></i> Add License
+        </a>
     </div>
 </div>
 
 @if (TempData["Success"] != null)
 {
-    <div class="alert alert-success">
-        @TempData["Success"]
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>@TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 }
 
 @if (TempData["Error"] != null)
 {
-    <div class="alert alert-danger">
-        @TempData["Error"]
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 }
 
-<a asp-action="Create" class="btn btn-primary mb-3">
-    Add License
-</a>
-
-<div class="filter-bar">
-    <div class="row">
-        <div class="col-md-4 mb-2 mb-md-0">
-            <input type="text"
-                   id="licenseSearch"
-                   class="form-control"
-                   placeholder="Search license key, username, role..." />
+<!-- Filter Bar -->
+<div class="filter-bar mb-4">
+    <div class="row g-2">
+        <div class="col-md-4">
+            <div class="input-group">
+                <span class="input-group-text bg-transparent border-end-0">
+                    <i class="bi bi-search text-muted"></i>
+                </span>
+                <input type="text"
+                       id="licenseSearch"
+                       class="form-control border-start-0 ps-0"
+                       placeholder="Search key, email, user, company, phone, country..." />
+            </div>
         </div>
 
-        <div class="col-md-3 mb-2 mb-md-0">
-            <select id="licenseTypeFilter" class="form-control">
-                <option value="">All License Types</option>
+        <div class="col-md-2">
+            <select id="licenseTypeFilter" class="form-select">
+                <option value="">All Types</option>
+                <option value="Trial">Trial</option>
+                <option value="Annual">Annual</option>
+                <option value="Lifetime">Lifetime</option>
                 <option value="MainCM">Main CM</option>
                 <option value="SubLicense">Sub License</option>
                 <option value="UserLicense">User License</option>
             </select>
         </div>
 
-        <div class="col-md-3 mb-2 mb-md-0">
-            <select id="statusFilter" class="form-control">
+        <div class="col-md-2">
+            <select id="statusFilter" class="form-select">
                 <option value="">All Status</option>
                 <option value="Active">Active</option>
+                <option value="Expired">Expired</option>
                 <option value="Inactive">Inactive</option>
             </select>
         </div>
 
         <div class="col-md-2">
-            <button type="button" id="clearFilters" class="btn btn-secondary w-100">
-                Clear
+            <select id="countryFilter" class="form-select">
+                <option value="">All Countries</option>
+            </select>
+        </div>
+
+        <div class="col-md-1">
+            <select id="revitVersionFilter" class="form-select">
+                <option value="">All Revit</option>
+            </select>
+        </div>
+
+        <div class="col-md-1">
+            <button type="button" id="clearFilters" class="btn btn-outline-secondary w-100">
+                <i class="bi bi-x-lg"></i> Clear
             </button>
+        </div>
+    </div>
+
+    <div class="mt-2">
+        <small class="text-muted">
+            Showing <span id="visibleCount">@Model.Count</span> of @Model.Count licenses
+        </small>
+    </div>
+</div>
+
+<!-- License Table -->
+<div class="table-responsive rounded-3 border">
+    <table class="table table-hover align-middle mb-0 license-table">
+        <thead>
+            <tr>
+                <th class="ps-3">License Key</th>
+                <th>User</th>
+                <th>Email</th>
+                <th>Company</th>
+                <th>Country</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Expiry</th>
+                <th>Device</th>
+                <th class="text-center">Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach (var lic in Model)
+            {
+                var usernameText = lic.username?.Trim() ?? "";
+                var normalizedUsername = usernameText.ToLower();
+                var licenseTypeText = string.IsNullOrWhiteSpace(lic.licenseType) ? "Unknown" : lic.licenseType;
+                var isAdminLicense = normalizedUsername == "admin";
+                var isMainCmLicense = licenseTypeText == "MainCM";
+
+                var deviceText = isMainCmLicense
+                    ? "Web Access"
+                    : lic.deviceId == null || lic.deviceId.ToString() == "{}"
+                        ? "Not Bound"
+                        : lic.deviceId.ToString()!;
+
+                DateTime expDate;
+                bool expiryValid = DateTime.TryParse(lic.expiryDate, out expDate);
+                bool isExpired = expiryValid && expDate < now;
+                string expiryDisplay = expiryValid ? expDate.ToString("dd MMM yyyy") : (lic.expiryDate ?? "-");
+                string expiryRaw = expiryValid ? expDate.ToString("yyyy-MM-dd") : "";
+
+                string createdDisplay = "-";
+                if (!string.IsNullOrWhiteSpace(lic.createdAt) && DateTime.TryParse(lic.createdAt, out var createdDate))
+                    createdDisplay = createdDate.ToString("dd MMM yyyy");
+
+                string lastSeenDisplay = "-";
+                if (lic.lastSeenAt != null && DateTime.TryParse(lic.lastSeenAt.ToString(), out var lastSeen))
+                    lastSeenDisplay = lastSeen.ToString("dd MMM yyyy HH:mm");
+
+                // Compute status badge
+                string statusLabel, statusBadgeClass;
+                if (!lic.isActive)
+                {
+                    statusLabel = "Inactive";
+                    statusBadgeClass = "badge-status-inactive";
+                }
+                else if (isExpired)
+                {
+                    statusLabel = "Expired";
+                    statusBadgeClass = "badge-status-expired";
+                }
+                else if (string.Equals(lic.licenseType, "Trial", StringComparison.OrdinalIgnoreCase))
+                {
+                    statusLabel = "Trial";
+                    statusBadgeClass = "badge-status-trial";
+                }
+                else if (string.Equals(lic.licenseType, "Annual", StringComparison.OrdinalIgnoreCase))
+                {
+                    statusLabel = "Annual";
+                    statusBadgeClass = "badge-status-annual";
+                }
+                else if (string.Equals(lic.licenseType, "Lifetime", StringComparison.OrdinalIgnoreCase))
+                {
+                    statusLabel = "Lifetime";
+                    statusBadgeClass = "badge-status-lifetime";
+                }
+                else
+                {
+                    statusLabel = "Active";
+                    statusBadgeClass = "badge-status-annual";
+                }
+
+                string filterStatus = !lic.isActive ? "Inactive" : (isExpired ? "Expired" : "Active");
+
+                // License type badge
+                string typeBadgeClass = lic.licenseType switch
+                {
+                    "MainCM" => "bg-primary",
+                    "SubLicense" => "bg-secondary",
+                    "UserLicense" => "bg-info text-dark",
+                    "Trial" => "bg-primary",
+                    "Annual" => "bg-success",
+                    "Lifetime" => "badge-type-gold",
+                    _ => "bg-light text-dark"
+                };
+
+                string typeLabel = lic.licenseType switch
+                {
+                    "MainCM" => "Main CM",
+                    "SubLicense" => "Sub License",
+                    "UserLicense" => "User",
+                    "Trial" => "Trial",
+                    "Annual" => "Annual",
+                    "Lifetime" => "Lifetime",
+                    _ => licenseTypeText
+                };
+
+                var searchText = $"{lic.licenseKey} {usernameText} {lic.email} {lic.company} {lic.phone} {lic.country} {licenseTypeText} {statusLabel}".ToLower();
+                var countryVal = lic.country?.Trim() ?? "";
+                var revitVersionVal = lic.revitVersion?.Trim() ?? "";
+
+                <tr class="license-row"
+                    data-id="@lic.id"
+                    data-search="@searchText"
+                    data-type="@licenseTypeText"
+                    data-status="@filterStatus"
+                    data-country="@countryVal"
+                    data-revit-version="@revitVersionVal"
+                    data-key="@lic.licenseKey"
+                    data-username="@usernameText"
+                    data-email="@(lic.email ?? "")"
+                    data-company="@(lic.company ?? "")"
+                    data-phone="@(lic.phone ?? "")"
+                    data-country-val="@countryVal"
+                    data-revit-version-val="@revitVersionVal"
+                    data-purpose="@(lic.purposeOfUse ?? "")"
+                    data-type-label="@typeLabel"
+                    data-status-label="@statusLabel"
+                    data-status-badge="@statusBadgeClass"
+                    data-created="@createdDisplay"
+                    data-expiry="@expiryDisplay"
+                    data-expiry-raw="@expiryRaw"
+                    data-device="@deviceText"
+                    data-last-seen="@lastSeenDisplay"
+                    data-is-active="@lic.isActive.ToString().ToLower()"
+                    data-is-main-cm="@isMainCmLicense.ToString().ToLower()"
+                    data-is-admin="@isAdminLicense.ToString().ToLower()">
+
+                    <td class="ps-3">
+                        <code class="license-key-text">@lic.licenseKey</code>
+                    </td>
+
+                    <td>
+                        <span class="fw-semibold">@usernameText</span>
+                    </td>
+
+                    <td class="text-muted small">
+                        @(string.IsNullOrWhiteSpace(lic.email) ? "-" : lic.email)
+                    </td>
+
+                    <td class="text-muted small">
+                        @(string.IsNullOrWhiteSpace(lic.company) ? "-" : lic.company)
+                    </td>
+
+                    <td class="text-muted small">
+                        @(string.IsNullOrWhiteSpace(lic.country) ? "-" : lic.country)
+                    </td>
+
+                    <td>
+                        <span class="badge @typeBadgeClass">@typeLabel</span>
+                    </td>
+
+                    <td>
+                        <span class="badge @statusBadgeClass">@statusLabel</span>
+                    </td>
+
+                    <td class="text-muted small">@createdDisplay</td>
+
+                    <td class="small @(isExpired ? "text-danger fw-semibold" : "text-muted")">
+                        @expiryDisplay
+                    </td>
+
+                    <td class="text-muted small device-cell">
+                        @(deviceText.Length > 18 ? deviceText.Substring(0, 18) + "…" : deviceText)
+                    </td>
+
+                    <td class="text-center">
+                        <button type="button"
+                                class="btn btn-sm btn-outline-primary details-btn"
+                                title="View Details">
+                            <i class="bi bi-eye"></i>
+                        </button>
+
+                        @if (lic.licenseType == "MainCM")
+                        {
+                            <a asp-action="ContractManager"
+                               asp-route-id="@lic.userId"
+                               class="btn btn-sm btn-outline-info ms-1"
+                               title="View Sub-Licenses">
+                                <i class="bi bi-diagram-3"></i>
+                            </a>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- ===== User Details Modal ===== -->
+<div class="modal fade" id="userDetailsModal" tabindex="-1" aria-labelledby="userDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="userDetailsModalLabel">
+                    <i class="bi bi-person-badge me-2"></i> License Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-4">
+                    <!-- User Info -->
+                    <div class="col-md-6">
+                        <h6 class="fw-bold text-muted mb-3 text-uppercase" style="font-size: 11px; letter-spacing: .08em;">
+                            <i class="bi bi-person-fill me-1"></i> User Information
+                        </h6>
+                        <table class="table table-borderless table-sm detail-table">
+                            <tr><th>Name</th><td id="modal-username">-</td></tr>
+                            <tr><th>Email</th><td id="modal-email">-</td></tr>
+                            <tr><th>Company</th><td id="modal-company">-</td></tr>
+                            <tr><th>Phone</th><td id="modal-phone">-</td></tr>
+                            <tr><th>Country</th><td id="modal-country">-</td></tr>
+                            <tr><th>Revit Version</th><td id="modal-revit-version">-</td></tr>
+                            <tr><th>Purpose</th><td id="modal-purpose">-</td></tr>
+                        </table>
+                    </div>
+                    <!-- License Info -->
+                    <div class="col-md-6">
+                        <h6 class="fw-bold text-muted mb-3 text-uppercase" style="font-size: 11px; letter-spacing: .08em;">
+                            <i class="bi bi-key-fill me-1"></i> License Information
+                        </h6>
+                        <table class="table table-borderless table-sm detail-table">
+                            <tr>
+                                <th>License Key</th>
+                                <td><code id="modal-key" class="license-key-text small" style="word-break: break-all;">-</code></td>
+                            </tr>
+                            <tr><th>Type</th><td id="modal-type">-</td></tr>
+                            <tr><th>Status</th><td><span id="modal-status-badge" class="badge">-</span></td></tr>
+                            <tr><th>Created</th><td id="modal-created">-</td></tr>
+                            <tr><th>Expiry</th><td id="modal-expiry">-</td></tr>
+                            <tr><th>Device ID</th><td><small id="modal-device" class="text-muted" style="word-break: break-all;">-</small></td></tr>
+                            <tr><th>Last Seen</th><td id="modal-last-seen">-</td></tr>
+                        </table>
+
+                        <!-- Update Expiry -->
+                        <div class="mt-3 p-3 bg-light rounded-3">
+                            <label class="form-label fw-semibold small mb-2">Update Expiry Date</label>
+                            <form id="updateExpiryForm" asp-action="UpdateExpiry" method="post" class="d-flex gap-2">
+                                <input type="hidden" id="modal-expiry-id" name="id" value="" />
+                                <input type="date" name="expiryDate" id="modal-expiry-input" class="form-control form-control-sm" />
+                                <button type="submit" class="btn btn-primary btn-sm px-3">Save</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer flex-wrap gap-2 justify-content-start">
+                <button class="btn btn-success btn-sm" id="modal-upgrade-btn">
+                    <i class="bi bi-arrow-up-circle-fill"></i> Upgrade
+                </button>
+                <button class="btn btn-info btn-sm text-white" id="modal-extend-btn">
+                    <i class="bi bi-clock-history"></i> Extend Trial
+                </button>
+                <form id="modal-reset-form" asp-action="ResetDevice" method="post" class="d-inline">
+                    <input type="hidden" id="modal-reset-id" name="id" value="" />
+                    <button type="submit" class="btn btn-warning btn-sm"
+                            onclick="return confirm('Remove device binding? The user must re-activate on next login.');">
+                        <i class="bi bi-phone-vibrate-fill"></i> Deauthorize
+                    </button>
+                </form>
+                <button class="btn btn-secondary btn-sm" id="modal-resend-btn">
+                    <i class="bi bi-envelope-fill"></i> Resend Email
+                </button>
+                <form id="modal-toggle-form" asp-action="Toggle" method="post" class="d-inline">
+                    <input type="hidden" id="modal-toggle-id" name="id" value="" />
+                    <button type="submit" class="btn btn-outline-warning btn-sm" id="modal-toggle-btn">
+                        <i class="bi bi-toggle-off"></i> Deactivate
+                    </button>
+                </form>
+                <form id="modal-delete-form" asp-action="Delete" method="post" class="d-inline ms-auto">
+                    <input type="hidden" id="modal-delete-id" name="id" value="" />
+                    <button type="submit" class="btn btn-danger btn-sm" id="modal-delete-btn">
+                        <i class="bi bi-trash-fill"></i> Delete
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 </div>
 
-<table class="table table-bordered table-striped">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>License Key</th>
-            <th>License Type</th>
-            <th>Parent CM ID</th>
-            <th>User</th>
-            <th>License Role</th>
-            <th>Status</th>
-            <th>Expiry</th>
-            <th>Device ID</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
+<!-- ===== Upgrade License Modal ===== -->
+<div class="modal fade" id="upgradeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-arrow-up-circle-fill text-success me-2"></i> Upgrade License</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-4">Select upgrade type for <strong id="upgrade-key"></strong></p>
+                <div class="d-grid gap-3">
+                    <button class="btn btn-outline-success upgrade-option text-start px-4" data-type="Annual1">
+                        <i class="bi bi-calendar-check-fill me-2 text-success"></i>
+                        <span class="fw-semibold">1 Year License</span>
+                        <small class="d-block text-muted mt-1">Annual subscription, 12 months access</small>
+                    </button>
+                    <button class="btn btn-outline-success upgrade-option text-start px-4" data-type="Annual2">
+                        <i class="bi bi-calendar2-check-fill me-2 text-success"></i>
+                        <span class="fw-semibold">2 Year License</span>
+                        <small class="d-block text-muted mt-1">Annual subscription, 24 months access</small>
+                    </button>
+                    <button class="btn btn-outline-warning upgrade-option text-start px-4" data-type="Lifetime">
+                        <i class="bi bi-star-fill me-2 text-warning"></i>
+                        <span class="fw-semibold">Lifetime License</span>
+                        <small class="d-block text-muted mt-1">One-time purchase, unlimited access</small>
+                    </button>
+                </div>
+                <div id="upgrade-result" class="mt-3"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
 
-    <tbody>
-        @foreach (var lic in Model)
-        {
-            var statusText = lic.isActive ? "Active" : "Inactive";
-            var licenseTypeText = string.IsNullOrWhiteSpace(lic.licenseType) ? "Unknown" : lic.licenseType;
-            var usernameText = lic.username?.Trim() ?? "";
-            var normalizedUsername = usernameText.ToLower();
-
-            var isAdminLicense = normalizedUsername == "admin";
-            var isMainCmLicense = licenseTypeText == "MainCM";
-
-            var deviceText = isMainCmLicense
-                ? "Web Access"
-                : lic.deviceId == null || lic.deviceId.ToString() == "{}"
-                    ? "Not Bound"
-                    : lic.deviceId.ToString();
-
-            var searchText = $"{lic.licenseKey} {usernameText} {licenseTypeText} {statusText} {deviceText}".ToLower();
-
-            <tr class="license-row"
-                data-search="@searchText"
-                data-type="@licenseTypeText"
-                data-status="@statusText">
-
-                <td>@lic.id</td>
-
-                <td style="min-width: 130px;">
-                    <strong>@lic.licenseKey</strong>
-                </td>
-
-                <td>
-                    @if (lic.licenseType == "MainCM")
-                    {
-                        <span class="badge bg-primary">Main CM</span>
-                    }
-                    else if (lic.licenseType == "SubLicense")
-                    {
-                        <span class="badge bg-secondary">Sub License</span>
-                    }
-                    else
-                    {
-                        <span class="badge bg-light text-dark">
-                            @licenseTypeText
-                        </span>
-                    }
-                </td>
-
-                <td>
-                    @(lic.parentContractManagerId == null ? "-" : lic.parentContractManagerId)
-                </td>
-
-                <td>
-                    <strong>@usernameText</strong>
-                </td>
-
-                <td>
-                    @if (lic.licenseType == "MainCM")
-                    {
-                        <span class="badge bg-primary">Contract Manager</span>
-                    }
-                    else if (lic.licenseType == "SubLicense")
-                    {
-                        <span class="badge bg-secondary">Sub-License User</span>
-                    }
-                    else if (lic.licenseType == "UserLicense")
-                    {
-                        <span class="badge bg-info">User</span>
-                    }
-                    else
-                    {
-                        <span class="badge bg-light text-dark">
-                            @licenseTypeText
-                        </span>
-                    }
-                </td>
-
-                <td>
-                    @if (lic.isActive)
-                    {
-                        <span class="badge bg-success">Active</span>
-                    }
-                    else
-                    {
-                        <span class="badge bg-danger">Inactive</span>
-                    }
-                </td>
-
-                <td>
-                    <form asp-action="UpdateExpiry" method="post">
-                        <input type="hidden" name="id" value="@lic.id" />
-
-                        @{
-                            DateTime expiryParsed;
-                            var expiryDisplay = DateTime.TryParse(lic.expiryDate, out expiryParsed)
-                                ? expiryParsed.ToString("dd-MM-yyyy")
-                                : lic.expiryDate;
-                        }
-
-                        <input type="text"
-                               name="expiryDate"
-                               class="form-control form-control-sm"
-                               value="@expiryDisplay"
-                               onchange="this.form.submit()" />
-                    </form>
-                </td>
-
-                <td style="max-width: 280px; word-break: break-all;">
-                    @deviceText
-                </td>
-
-                <td style="min-width: 280px;">
-                    <form asp-action="Toggle" method="post" style="display:inline;">
-                        <input type="hidden" name="id" value="@lic.id" />
-                        <button type="submit"
-                                class="btn btn-warning btn-sm"
-                                onclick="return confirm('Toggle this license status?');">
-                            Toggle
-                        </button>
-                    </form>
-
-                    @if (!isMainCmLicense)
-                    {
-                        <form asp-action="ResetDevice" method="post" style="display:inline;">
-                            <input type="hidden" name="id" value="@lic.id" />
-                            <button type="submit"
-                                    class="btn btn-danger btn-sm"
-                                    onclick="return confirm('Deauthorize this license? This will remove the current device binding. The user must activate this license again on the next login. Continue?');">
-                                Deauthorize License
-                            </button>
-                        </form>
-                    }
-
-                    @if (isAdminLicense)
-                    {
-                        <span class="text-muted small ms-1">
-                            Admin license protected
-                        </span>
-                    }
-                    else if (isMainCmLicense)
-                    {
-                        <form asp-action="Delete" method="post" style="display:inline;">
-                            <input type="hidden" name="id" value="@lic.id" />
-                            <button type="submit"
-                                    class="btn btn-outline-danger btn-sm"
-                                    onclick="return confirm('WARNING: This is a Main Contract Manager license. Deleting it may permanently delete or disconnect all sub-licenses under this Contract Manager. This action cannot be undone. Continue?');">
-                                Delete
-                            </button>
-                        </form>
-                    }
-                    else
-                    {
-                        <form asp-action="Delete" method="post" style="display:inline;">
-                            <input type="hidden" name="id" value="@lic.id" />
-                            <button type="submit"
-                                    class="btn btn-outline-danger btn-sm"
-                                    onclick="return confirm('WARNING: This will permanently delete this license. This action cannot be undone. Continue?');">
-                                Delete
-                            </button>
-                        </form>
-                    }
-
-                    @if (lic.licenseType == "MainCM")
-                    {
-                        <a asp-action="ContractManager"
-                           asp-route-id="@lic.userId"
-                           class="btn btn-info btn-sm mt-1">
-                            View Sub-Licenses
-                        </a>
-                    }
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+<!-- ===== Extend Trial Modal ===== -->
+<div class="modal fade" id="extendTrialModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-clock-history text-info me-2"></i> Extend Trial</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-4">Extend trial period for <strong id="extend-key"></strong></p>
+                <div class="d-grid gap-3">
+                    <button class="btn btn-outline-primary extend-option text-start px-4" data-days="7">
+                        <i class="bi bi-calendar-plus me-2"></i>
+                        <span class="fw-semibold">7 Days</span>
+                        <small class="d-block text-muted mt-1">Short extension for evaluation</small>
+                    </button>
+                    <button class="btn btn-outline-primary extend-option text-start px-4" data-days="14">
+                        <i class="bi bi-calendar-plus me-2"></i>
+                        <span class="fw-semibold">14 Days</span>
+                        <small class="d-block text-muted mt-1">Two weeks additional access</small>
+                    </button>
+                    <button class="btn btn-outline-primary extend-option text-start px-4" data-days="30">
+                        <i class="bi bi-calendar-plus me-2"></i>
+                        <span class="fw-semibold">30 Days</span>
+                        <small class="d-block text-muted mt-1">Full month extension</small>
+                    </button>
+                </div>
+                <div id="extend-result" class="mt-3"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 @section Scripts {
     <script>
-        const searchInput = document.getElementById("licenseSearch");
-        const typeFilter = document.getElementById("licenseTypeFilter");
-        const statusFilter = document.getElementById("statusFilter");
-        const clearButton = document.getElementById("clearFilters");
+        // ── Filter logic ──────────────────────────────────────────────
+        const rows = document.querySelectorAll('.license-row');
+        const visibleCountEl = document.getElementById('visibleCount');
 
         function applyFilters() {
-            const searchValue = searchInput.value.toLowerCase().trim();
-            const typeValue = typeFilter.value;
-            const statusValue = statusFilter.value;
+            const search = document.getElementById('licenseSearch').value.toLowerCase().trim();
+            const type = document.getElementById('licenseTypeFilter').value;
+            const status = document.getElementById('statusFilter').value;
+            const country = document.getElementById('countryFilter').value;
+            const revit = document.getElementById('revitVersionFilter').value;
+            let count = 0;
 
-            document.querySelectorAll(".license-row").forEach(row => {
-                const rowSearch = row.dataset.search || "";
-                const rowType = row.dataset.type || "";
-                const rowStatus = row.dataset.status || "";
+            rows.forEach(row => {
+                const matchSearch = !search || (row.dataset.search || '').includes(search);
+                const matchType = !type || row.dataset.type === type;
+                const matchStatus = !status || row.dataset.status === status;
+                const matchCountry = !country || row.dataset.country === country;
+                const matchRevit = !revit || row.dataset.revitVersion === revit;
+                const visible = matchSearch && matchType && matchStatus && matchCountry && matchRevit;
+                row.style.display = visible ? '' : 'none';
+                if (visible) count++;
+            });
 
-                const matchesSearch = rowSearch.includes(searchValue);
-                const matchesType = !typeValue || rowType === typeValue;
-                const matchesStatus = !statusValue || rowStatus === statusValue;
+            visibleCountEl.textContent = count;
+        }
 
-                row.style.display = matchesSearch && matchesType && matchesStatus
-                    ? ""
-                    : "none";
+        ['licenseSearch', 'licenseTypeFilter', 'statusFilter', 'countryFilter', 'revitVersionFilter'].forEach(id => {
+            const el = document.getElementById(id);
+            el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', applyFilters);
+        });
+
+        document.getElementById('clearFilters').addEventListener('click', function () {
+            document.getElementById('licenseSearch').value = '';
+            ['licenseTypeFilter', 'statusFilter', 'countryFilter', 'revitVersionFilter'].forEach(id => {
+                document.getElementById(id).value = '';
+            });
+            applyFilters();
+        });
+
+        // Populate country + revit version dropdowns from row data
+        function populateDynamicFilter(selectId, dataAttr) {
+            const values = [...new Set([...rows].map(r => r.dataset[dataAttr]).filter(v => v && v.trim()))];
+            values.sort();
+            const select = document.getElementById(selectId);
+            values.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v;
+                opt.textContent = v;
+                select.appendChild(opt);
             });
         }
 
-        searchInput.addEventListener("input", applyFilters);
-        typeFilter.addEventListener("change", applyFilters);
-        statusFilter.addEventListener("change", applyFilters);
+        populateDynamicFilter('countryFilter', 'country');
+        populateDynamicFilter('revitVersionFilter', 'revitVersion');
 
-        clearButton.addEventListener("click", function () {
-            searchInput.value = "";
-            typeFilter.value = "";
-            statusFilter.value = "";
-            applyFilters();
+        // ── Details Modal ─────────────────────────────────────────────
+        let currentLicenseId = null;
+
+        document.querySelectorAll('.details-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const row = this.closest('.license-row');
+                openDetailsModal(row);
+            });
+        });
+
+        function openDetailsModal(row) {
+            currentLicenseId = row.dataset.id;
+
+            document.getElementById('modal-username').textContent = row.dataset.username || '-';
+            document.getElementById('modal-email').textContent = row.dataset.email || '-';
+            document.getElementById('modal-company').textContent = row.dataset.company || '-';
+            document.getElementById('modal-phone').textContent = row.dataset.phone || '-';
+            document.getElementById('modal-country').textContent = row.dataset.countryVal || '-';
+            document.getElementById('modal-revit-version').textContent = row.dataset.revitVersionVal || '-';
+            document.getElementById('modal-purpose').textContent = row.dataset.purpose || '-';
+            document.getElementById('modal-key').textContent = row.dataset.key || '-';
+            document.getElementById('modal-type').textContent = row.dataset.typeLabel || '-';
+            document.getElementById('modal-created').textContent = row.dataset.created || '-';
+            document.getElementById('modal-expiry').textContent = row.dataset.expiry || '-';
+            document.getElementById('modal-device').textContent = row.dataset.device || '-';
+            document.getElementById('modal-last-seen').textContent = row.dataset.lastSeen || '-';
+
+            const statusBadge = document.getElementById('modal-status-badge');
+            statusBadge.textContent = row.dataset.statusLabel || '-';
+            statusBadge.className = 'badge ' + (row.dataset.statusBadge || 'bg-secondary');
+
+            document.getElementById('modal-expiry-id').value = currentLicenseId;
+            document.getElementById('modal-reset-id').value = currentLicenseId;
+            document.getElementById('modal-toggle-id').value = currentLicenseId;
+            document.getElementById('modal-delete-id').value = currentLicenseId;
+
+            const expiryRaw = row.dataset.expiryRaw;
+            if (expiryRaw) document.getElementById('modal-expiry-input').value = expiryRaw;
+
+            const isActive = row.dataset.isActive === 'true';
+            const toggleBtn = document.getElementById('modal-toggle-btn');
+            toggleBtn.innerHTML = isActive
+                ? '<i class="bi bi-toggle-off"></i> Deactivate'
+                : '<i class="bi bi-toggle-on"></i> Activate';
+
+            const isAdmin = row.dataset.isAdmin === 'true';
+            const deleteBtn = document.getElementById('modal-delete-btn');
+            deleteBtn.disabled = isAdmin;
+            deleteBtn.title = isAdmin ? 'Admin license is protected and cannot be deleted.' : '';
+
+            const isMainCm = row.dataset.isMainCm === 'true';
+            if (!isMainCm) {
+                document.getElementById('modal-delete-btn').onclick = () =>
+                    confirm('WARNING: This will permanently delete this license. This action cannot be undone. Continue?');
+            } else {
+                document.getElementById('modal-delete-btn').onclick = () =>
+                    confirm('WARNING: This is a Main Contract Manager license. Deleting it may permanently delete all sub-licenses. This action cannot be undone. Continue?');
+            }
+
+            new bootstrap.Modal(document.getElementById('userDetailsModal')).show();
+        }
+
+        // ── Upgrade Modal ─────────────────────────────────────────────
+        document.getElementById('modal-upgrade-btn').addEventListener('click', function () {
+            const row = document.querySelector(`.license-row[data-id="${currentLicenseId}"]`);
+            document.getElementById('upgrade-key').textContent = row.dataset.key;
+            document.getElementById('upgrade-result').innerHTML = '';
+            bootstrap.Modal.getInstance(document.getElementById('userDetailsModal')).hide();
+            setTimeout(() => new bootstrap.Modal(document.getElementById('upgradeModal')).show(), 300);
+        });
+
+        document.querySelectorAll('.upgrade-option').forEach(btn => {
+            btn.addEventListener('click', async function () {
+                const upgradeType = this.dataset.type;
+                const resultEl = document.getElementById('upgrade-result');
+                resultEl.innerHTML = '<div class="text-center py-2"><span class="spinner-border spinner-border-sm text-primary me-2"></span>Processing…</div>';
+                this.disabled = true;
+
+                try {
+                    const formData = new FormData();
+                    formData.append('id', currentLicenseId);
+                    formData.append('upgradeType', upgradeType);
+
+                    const res = await fetch('/Licenses/Upgrade', { method: 'POST', body: formData });
+                    const data = await res.json();
+                    resultEl.innerHTML = `<div class="alert ${data.success ? 'alert-success' : 'alert-warning'} mb-0">${data.message}</div>`;
+                    if (data.success) setTimeout(() => window.location.reload(), 1800);
+                } catch {
+                    resultEl.innerHTML = '<div class="alert alert-danger mb-0">Request failed. Please try again.</div>';
+                }
+
+                this.disabled = false;
+            });
+        });
+
+        // ── Extend Trial Modal ────────────────────────────────────────
+        document.getElementById('modal-extend-btn').addEventListener('click', function () {
+            const row = document.querySelector(`.license-row[data-id="${currentLicenseId}"]`);
+            document.getElementById('extend-key').textContent = row.dataset.key;
+            document.getElementById('extend-result').innerHTML = '';
+            bootstrap.Modal.getInstance(document.getElementById('userDetailsModal')).hide();
+            setTimeout(() => new bootstrap.Modal(document.getElementById('extendTrialModal')).show(), 300);
+        });
+
+        document.querySelectorAll('.extend-option').forEach(btn => {
+            btn.addEventListener('click', async function () {
+                const days = this.dataset.days;
+                const resultEl = document.getElementById('extend-result');
+                resultEl.innerHTML = '<div class="text-center py-2"><span class="spinner-border spinner-border-sm text-primary me-2"></span>Processing…</div>';
+                this.disabled = true;
+
+                try {
+                    const formData = new FormData();
+                    formData.append('id', currentLicenseId);
+                    formData.append('days', days);
+
+                    const res = await fetch('/Licenses/ExtendTrial', { method: 'POST', body: formData });
+                    const data = await res.json();
+                    resultEl.innerHTML = `<div class="alert ${data.success ? 'alert-success' : 'alert-warning'} mb-0">${data.message}</div>`;
+                    if (data.success) setTimeout(() => window.location.reload(), 1800);
+                } catch {
+                    resultEl.innerHTML = '<div class="alert alert-danger mb-0">Request failed. Please try again.</div>';
+                }
+
+                this.disabled = false;
+            });
+        });
+
+        // ── Resend Email ──────────────────────────────────────────────
+        document.getElementById('modal-resend-btn').addEventListener('click', async function () {
+            const btn = this;
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sending…';
+
+            try {
+                const formData = new FormData();
+                formData.append('id', currentLicenseId);
+
+                const res = await fetch('/Licenses/ResendEmail', { method: 'POST', body: formData });
+                const data = await res.json();
+                alert(data.message);
+            } catch {
+                alert('Request failed. Please try again.');
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
         });
     </script>
 }

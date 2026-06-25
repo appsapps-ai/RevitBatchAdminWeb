@@ -246,6 +246,28 @@ namespace RevitBatchAdminWeb.Services
             return response.IsSuccessStatusCode;
         }
 
+        public async Task<bool> UpgradeLicenseAsync(int id, string upgradeType)
+        {
+            var json = JsonConvert.SerializeObject(new { upgradeType });
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await _httpClient.PutAsync($"{BaseUrl}/License/{id}/upgrade", content);
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<bool> ExtendTrialAsync(int id, int days)
+        {
+            var json = JsonConvert.SerializeObject(new { days });
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await _httpClient.PutAsync($"{BaseUrl}/License/{id}/extend-trial", content);
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<bool> ResendEmailAsync(int id)
+        {
+            var response = await _httpClient.PostAsync($"{BaseUrl}/License/{id}/resend-email", null);
+            return response.IsSuccessStatusCode;
+        }
+
         public async Task<bool> UpdateLicenseExpiryAsync(int id, DateTime expiryDate)
         {
             var json = JsonConvert.SerializeObject(new
@@ -342,6 +364,10 @@ namespace RevitBatchAdminWeb.Services
         public string username { get; set; } = "";
         public string role { get; set; } = "";
         public int licenseCount { get; set; }
+        public string? email { get; set; }
+        public string? company { get; set; }
+        public string? country { get; set; }
+        public string? phone { get; set; }
     }
 
     public class LicenseDto
@@ -359,6 +385,13 @@ namespace RevitBatchAdminWeb.Services
         public string role { get; set; } = "";
         public string? licenseType { get; set; }
         public int? parentContractManagerId { get; set; }
+        public string? email { get; set; }
+        public string? company { get; set; }
+        public string? country { get; set; }
+        public string? phone { get; set; }
+        public string? revitVersion { get; set; }
+        public string? purposeOfUse { get; set; }
+        public string? createdAt { get; set; }
     }
 
     public class AdminLoginResponse

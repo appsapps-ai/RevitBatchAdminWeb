@@ -1,59 +1,181 @@
-﻿@{
+@{
     ViewData["Title"] = "Admin Dashboard";
 }
 
-<div class="page-header">
-    <h2 class="page-title">Revit Batch SaaS Admin Dashboard</h2>
-    <p class="page-subtitle">
-        Overview of users, licenses, active subscriptions, and contract managers.
-    </p>
-
-    <div class="d-flex align-items-center gap-2 mt-2">
-        <span class="badge bg-success-subtle text-success border border-success-subtle live-refresh-badge">
-            ↻ Auto refresh every 10s
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <div>
+        <h2 class="page-title mb-1">Admin Dashboard</h2>
+        <p class="page-subtitle mb-0">License management overview for Revit Batch SaaS.</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-success-subtle text-success border border-success-subtle">
+            <i class="bi bi-arrow-repeat"></i> Auto refresh every 10s
         </span>
-
-        <button type="button"
-                class="btn btn-sm btn-outline-secondary"
-                onclick="window.location.reload();">
-            Refresh Now
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.location.reload();">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
         </button>
     </div>
 </div>
 
-<div class="row g-4">
-    <div class="col-md-6 col-lg-4">
-        <div class="card dashboard-card p-4">
-            <h5>Total Users</h5>
-            <div class="metric">@ViewBag.TotalUsers</div>
+<!-- Row 1: Users & Licenses -->
+<div class="row g-4 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-card-icon bg-primary-subtle text-primary">
+                <i class="bi bi-people-fill"></i>
+            </div>
+            <div class="stat-card-value">@ViewBag.TotalUsers</div>
+            <div class="stat-card-label">Total Users</div>
         </div>
     </div>
-
-    <div class="col-md-6 col-lg-4">
-        <div class="card dashboard-card p-4">
-            <h5>Total Licenses</h5>
-            <div class="metric">@ViewBag.TotalLicenses</div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-card-icon bg-info-subtle text-info">
+                <i class="bi bi-hourglass-split"></i>
+            </div>
+            <div class="stat-card-value">@ViewBag.TrialUsers</div>
+            <div class="stat-card-label">Trial Users</div>
         </div>
     </div>
-
-    <div class="col-md-6 col-lg-4">
-        <div class="card dashboard-card p-4">
-            <h5>Active Licenses</h5>
-            <div class="metric">@ViewBag.ActiveLicenses</div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-card-icon bg-success-subtle text-success">
+                <i class="bi bi-check-circle-fill"></i>
+            </div>
+            <div class="stat-card-value">@ViewBag.ActiveLicenses</div>
+            <div class="stat-card-label">Active Licenses</div>
         </div>
     </div>
-
-    <div class="col-md-6 col-lg-4">
-        <div class="card dashboard-card p-4">
-            <h5>Inactive Licenses</h5>
-            <div class="metric">@ViewBag.InactiveLicenses</div>
-        </div>
-    </div>
-
-    <div class="col-md-6 col-lg-4">
-        <div class="card dashboard-card p-4">
-            <h5>Contract Managers</h5>
-            <div class="metric">@ViewBag.ContractManagers</div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-card-icon bg-danger-subtle text-danger">
+                <i class="bi bi-x-circle-fill"></i>
+            </div>
+            <div class="stat-card-value">@ViewBag.ExpiredLicenses</div>
+            <div class="stat-card-label">Expired Licenses</div>
         </div>
     </div>
 </div>
+
+<!-- Row 2: License Types & Metrics -->
+<div class="row g-4 mb-5">
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-card-icon bg-warning-subtle text-warning">
+                <i class="bi bi-calendar-check-fill"></i>
+            </div>
+            <div class="stat-card-value">@ViewBag.AnnualLicenses</div>
+            <div class="stat-card-label">Annual Licenses</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-card-icon stat-icon-gold">
+                <i class="bi bi-star-fill"></i>
+            </div>
+            <div class="stat-card-value">@ViewBag.LifetimeLicenses</div>
+            <div class="stat-card-label">Lifetime Licenses</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-card-icon bg-secondary-subtle text-secondary">
+                <i class="bi bi-envelope-fill"></i>
+            </div>
+            <div class="stat-card-value">@ViewBag.EmailsSent</div>
+            <div class="stat-card-label">Emails Sent</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-card-icon stat-icon-purple">
+                <i class="bi bi-graph-up-arrow"></i>
+            </div>
+            <div class="stat-card-value">@ViewBag.TrialConversionRate%</div>
+            <div class="stat-card-label">Conversion Rate</div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Charts -->
+<div class="d-flex align-items-center gap-2 mb-4">
+    <h4 class="fw-bold mb-0">Statistics</h4>
+    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Last 6 months</span>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card p-4 h-100">
+            <h6 class="text-muted fw-semibold mb-4">License Distribution</h6>
+            <canvas id="licenseDistributionChart"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card p-4 h-100">
+            <h6 class="text-muted fw-semibold mb-4">Monthly Activity — Trial vs Paid</h6>
+            <canvas id="monthlyChart"></canvas>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        const distributionData = @Html.Raw(ViewBag.DistributionJson ?? "[]");
+        const monthlyData = @Html.Raw(ViewBag.MonthlyJson ?? "[]");
+
+        const chartColors = ['#0d6efd', '#198754', '#d4a017', '#dc3545', '#6f42c1', '#0dcaf0', '#6c757d', '#fd7e14'];
+
+        new Chart(document.getElementById('licenseDistributionChart'), {
+            type: 'doughnut',
+            data: {
+                labels: distributionData.map(d => d.type),
+                datasets: [{
+                    data: distributionData.map(d => d.count),
+                    backgroundColor: chartColors,
+                    borderWidth: 3,
+                    borderColor: '#fff',
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                cutout: '60%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true } }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('monthlyChart'), {
+            type: 'bar',
+            data: {
+                labels: monthlyData.map(d => d.month),
+                datasets: [
+                    {
+                        label: 'Trial',
+                        data: monthlyData.map(d => d.trial),
+                        backgroundColor: '#0d6efd',
+                        borderRadius: 6
+                    },
+                    {
+                        label: 'Paid',
+                        data: monthlyData.map(d => d.paid),
+                        backgroundColor: '#198754',
+                        borderRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#f1f5f9' } }
+                },
+                plugins: {
+                    legend: { position: 'top', align: 'end', labels: { usePointStyle: true } }
+                }
+            }
+        });
+    </script>
+}

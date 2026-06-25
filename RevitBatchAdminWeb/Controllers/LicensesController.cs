@@ -183,6 +183,36 @@ namespace RevitBatchAdminWeb.Controllers
 
             return RedirectToAction("Index");
         }
+
+        [HttpPost]
+        public async Task<IActionResult> Upgrade(int id, string upgradeType)
+        {
+            if (!SetAdminToken())
+                return Json(new { success = false, message = "Unauthorized." });
+
+            bool ok = await _apiClient.UpgradeLicenseAsync(id, upgradeType);
+            return Json(new { success = ok, message = ok ? "License upgraded successfully." : "Upgrade failed. The API may not support this operation yet." });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ExtendTrial(int id, int days)
+        {
+            if (!SetAdminToken())
+                return Json(new { success = false, message = "Unauthorized." });
+
+            bool ok = await _apiClient.ExtendTrialAsync(id, days);
+            return Json(new { success = ok, message = ok ? $"Trial extended by {days} days." : "Extend failed. The API may not support this operation yet." });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ResendEmail(int id)
+        {
+            if (!SetAdminToken())
+                return Json(new { success = false, message = "Unauthorized." });
+
+            bool ok = await _apiClient.ResendEmailAsync(id);
+            return Json(new { success = ok, message = ok ? "Email sent successfully." : "Failed to send email. The API may not support this operation yet." });
+        }
     }
 
 }
