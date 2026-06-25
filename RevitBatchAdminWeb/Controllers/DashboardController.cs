@@ -35,10 +35,6 @@ namespace RevitBatchAdminWeb.Controllers
                 .Where(l => string.Equals(l.licenseType, "Annual", StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            var lifetimeLicenses = licenses
-                .Where(l => string.Equals(l.licenseType, "Lifetime", StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
             var expiredLicenses = licenses
                 .Where(l => DateTime.TryParse(l.expiryDate, out var exp) && exp < now)
                 .ToList();
@@ -47,7 +43,7 @@ namespace RevitBatchAdminWeb.Controllers
                 .Where(l => l.isActive && !(DateTime.TryParse(l.expiryDate, out var exp) && exp < now))
                 .ToList();
 
-            int paidCount = annualLicenses.Count + lifetimeLicenses.Count;
+            int paidCount = annualLicenses.Count;
             int totalRelevant = paidCount + trialLicenses.Count;
             double conversionRate = totalRelevant > 0
                 ? Math.Round((double)paidCount / totalRelevant * 100, 1)
@@ -58,7 +54,6 @@ namespace RevitBatchAdminWeb.Controllers
             ViewBag.ActiveLicenses = activeLicenses.Count;
             ViewBag.ExpiredLicenses = expiredLicenses.Count;
             ViewBag.AnnualLicenses = annualLicenses.Count;
-            ViewBag.LifetimeLicenses = lifetimeLicenses.Count;
             ViewBag.EmailsSent = 0;
             ViewBag.TrialConversionRate = conversionRate;
 
@@ -84,8 +79,7 @@ namespace RevitBatchAdminWeb.Controllers
                     d >= monthStart && d < monthEnd);
 
                 int paid = licenses.Count(l =>
-                    (string.Equals(l.licenseType, "Annual", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(l.licenseType, "Lifetime", StringComparison.OrdinalIgnoreCase)) &&
+                    string.Equals(l.licenseType, "Annual", StringComparison.OrdinalIgnoreCase) &&
                     l.activatedAt != null &&
                     DateTime.TryParse(l.activatedAt.ToString(), out var d) &&
                     d >= monthStart && d < monthEnd);

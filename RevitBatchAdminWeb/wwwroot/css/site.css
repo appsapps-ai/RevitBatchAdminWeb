@@ -354,11 +354,6 @@ body {
     color: #fff;
 }
 
-.badge-status-lifetime {
-    background-color: #d4a017;
-    color: #fff;
-}
-
 .badge-status-expired {
     background-color: #dc3545;
     color: #fff;
@@ -366,13 +361,6 @@ body {
 
 .badge-status-inactive {
     background-color: #6c757d;
-    color: #fff;
-}
-
-/* License type badges */
-
-.badge-type-gold {
-    background-color: #d4a017;
     color: #fff;
 }
 

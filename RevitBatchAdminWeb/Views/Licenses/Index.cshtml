@@ -59,7 +59,6 @@
                 <option value="">All Types</option>
                 <option value="Trial">Trial</option>
                 <option value="Annual">Annual</option>
-                <option value="Lifetime">Lifetime</option>
                 <option value="MainCM">Main CM</option>
                 <option value="SubLicense">Sub License</option>
                 <option value="UserLicense">User License</option>
@@ -171,11 +170,6 @@
                     statusLabel = "Annual";
                     statusBadgeClass = "badge-status-annual";
                 }
-                else if (string.Equals(lic.licenseType, "Lifetime", StringComparison.OrdinalIgnoreCase))
-                {
-                    statusLabel = "Lifetime";
-                    statusBadgeClass = "badge-status-lifetime";
-                }
                 else
                 {
                     statusLabel = "Active";
@@ -192,7 +186,6 @@
                     "UserLicense" => "bg-info text-dark",
                     "Trial" => "bg-primary",
                     "Annual" => "bg-success",
-                    "Lifetime" => "badge-type-gold",
                     _ => "bg-light text-dark"
                 };
 
@@ -203,7 +196,6 @@
                     "UserLicense" => "User",
                     "Trial" => "Trial",
                     "Annual" => "Annual",
-                    "Lifetime" => "Lifetime",
                     _ => licenseTypeText
                 };
 
@@ -410,11 +402,6 @@
                         <i class="bi bi-calendar2-check-fill me-2 text-success"></i>
                         <span class="fw-semibold">2 Year License</span>
                         <small class="d-block text-muted mt-1">Annual subscription, 24 months access</small>
-                    </button>
-                    <button class="btn btn-outline-warning upgrade-option text-start px-4" data-type="Lifetime">
-                        <i class="bi bi-star-fill me-2 text-warning"></i>
-                        <span class="fw-semibold">Lifetime License</span>
-                        <small class="d-block text-muted mt-1">One-time purchase, unlimited access</small>
                     </button>
                 </div>
                 <div id="upgrade-result" class="mt-3"></div>
