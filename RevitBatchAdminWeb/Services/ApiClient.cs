@@ -9,7 +9,17 @@ namespace RevitBatchAdminWeb.Services
     public class ApiClient
     {
         private readonly HttpClient _httpClient;
-        private const string BaseUrl = "https://revitbatchapi-f9f6aaf4cba0hze2.southeastasia-01.azurewebsites.net/api";
+        private readonly string BaseUrl;
+
+        public ApiClient(HttpClient httpClient, IConfiguration configuration)
+        {
+            _httpClient = httpClient;
+            BaseUrl = configuration["ApiBaseUrl"]!;
+
+            Console.WriteLine("======================================");
+            Console.WriteLine("ApiBaseUrl = " + BaseUrl);
+            Console.WriteLine("======================================");
+        }
 
         public ApiClient(HttpClient httpClient)
         {
